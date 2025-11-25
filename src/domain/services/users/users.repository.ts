@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { User } from '@/domain/entities/user.entity';
-import { IUsersRepository } from './users.repository.interface';
+import { IUsersRepository, PrismaTransaction } from './users.repository.interface';
 import { DatabaseService } from '../database/database.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UsersRepository implements IUsersRepository {
@@ -25,7 +26,11 @@ export class UsersRepository implements IUsersRepository {
     });
   }
 
-  async updateBalanceInTransaction(tx: any, userId: string, newBalance: number): Promise<void> {
+  async updateBalanceInTransaction(
+    tx: PrismaTransaction,
+    userId: string,
+    newBalance: number,
+  ): Promise<void> {
     await tx.user.update({
       where: { user_id: userId },
       data: { balance: newBalance },
@@ -59,12 +64,12 @@ export class UsersRepository implements IUsersRepository {
     ]);
 
     return {
-      users: users.map((u) => this.mapToUser(u)),
+      users: users.map((u: Prisma.UserGetPayload<{}>) => this.mapToUser(u)),
       total,
     };
   }
 
-  private mapToUser(prismaUser: any): User {
+  private mapToUser(prismaUser: Prisma.UserGetPayload<{}>): User {
     return {
       user_id: prismaUser.user_id,
       name: prismaUser.name,

@@ -1,6 +1,12 @@
 import { Transaction, TransactionType } from '@/domain/entities/transaction.entity';
+import { PrismaClient } from '@prisma/client';
 
 export const WALLET_REPOSITORY_TOKEN = Symbol('IWalletRepository');
+
+export type PrismaTransaction = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
 
 export interface IWalletRepository {
   createTransaction(data: {
@@ -20,7 +26,7 @@ export interface IWalletRepository {
   calculateBalance(userId: string): Promise<number>;
   findTransactionByReferenceId(referenceTransactionId: string): Promise<Transaction | null>;
   createTransactionInTransaction(
-    tx: any,
+    tx: PrismaTransaction,
     data: {
       userId: string;
       type: TransactionType;

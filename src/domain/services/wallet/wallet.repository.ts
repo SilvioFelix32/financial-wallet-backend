@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Transaction, TransactionType } from '@/domain/entities/transaction.entity';
-import { IWalletRepository } from './wallet.repository.interface';
+import { IWalletRepository, PrismaTransaction } from './wallet.repository.interface';
 import { DatabaseService } from '../database/database.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class WalletRepository implements IWalletRepository {
@@ -29,7 +30,7 @@ export class WalletRepository implements IWalletRepository {
   }
 
   async createTransactionInTransaction(
-    tx: any,
+    tx: PrismaTransaction,
     data: {
       userId: string;
       type: TransactionType;
@@ -88,7 +89,9 @@ export class WalletRepository implements IWalletRepository {
     ]);
 
     return {
-      transactions: transactions.map((t) => this.mapToTransaction(t)),
+      transactions: transactions.map((t: Prisma.TransactionGetPayload<{}>) =>
+        this.mapToTransaction(t),
+      ),
       total,
     };
   }
@@ -104,7 +107,7 @@ export class WalletRepository implements IWalletRepository {
     return result._sum.amount ? Number(result._sum.amount) : 0;
   }
 
-  private mapToTransaction(prismaTransaction: any): Transaction {
+  private mapToTransaction(prismaTransaction: Prisma.TransactionGetPayload<{}>): Transaction {
     return {
       id: prismaTransaction.id,
       userId: prismaTransaction.userId,

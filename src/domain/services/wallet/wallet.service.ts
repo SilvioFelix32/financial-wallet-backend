@@ -7,8 +7,7 @@ import {
   Inject,
   Logger,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
-import { IWalletRepository, WALLET_REPOSITORY_TOKEN } from './wallet.repository.interface';
+import { IWalletRepository, WALLET_REPOSITORY_TOKEN, PrismaTransaction } from './wallet.repository.interface';
 import { IUsersRepository, USERS_REPOSITORY_TOKEN } from '../users/users.repository.interface';
 import { TransactionType } from '@/domain/entities/transaction.entity';
 import { DepositDto } from '@/application/dtos/wallet/deposit.dto';
@@ -16,11 +15,6 @@ import { TransferDto } from '@/application/dtos/wallet/transfer.dto';
 import { RevertDto } from '@/application/dtos/wallet/revert.dto';
 import { TransactionsQueryDto } from '@/application/dtos/wallet/transactions-query.dto';
 import { DatabaseService } from '../database/database.service';
-
-type PrismaTransaction = Omit<
-  PrismaClient,
-  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
->;
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
