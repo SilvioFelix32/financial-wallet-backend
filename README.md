@@ -6,7 +6,7 @@ Sistema completo de carteira financeira com backend em NestJS seguindo Clean Arc
 
 - **NestJS** 11.1.9
 - **TypeScript** 5.9.3
-- **Prisma** 6.19.0
+- **Prisma** 7.0.0
 - **PostgreSQL**
 - **AWS Cognito** para autenticação
 - **Swagger** para documentação
@@ -82,6 +82,88 @@ npm run start:prod
 ```
 
 O servidor estará disponível em `http://localhost:3001`
+
+## Docker
+
+### Pré-requisitos
+
+- Docker e Docker Compose instalados
+- Arquivo `.env` configurado com todas as variáveis necessárias
+- PostgreSQL e Redis acessíveis (conforme configurado no `.env`)
+
+### Testar Localmente
+
+1. **Configure o arquivo `.env`** com as variáveis de ambiente:
+```bash
+APP_PORT=3000
+DATABASE_URL=postgresql://user:password@host:5432/database
+JWT_SECRET=your-secret
+REDIS_HOST=your-redis-host
+REDIS_PORT=6379
+REDIS_PASSWORD=your-redis-password
+REDIS_USER=your-redis-user
+REDIS_URL=redis://user:password@host:6379
+AWS_REGION=us-east-1
+COGNITO_USER_POOL_ID=your-pool-id
+```
+
+2. **Construir a imagem Docker:**
+```bash
+docker build -t financial-wallet-backend .
+```
+
+3. **Executar com Docker Compose:**
+```bash
+docker-compose up -d
+```
+
+4. **Executar migrações do banco de dados:**
+```bash
+docker exec -it financial-wallet-backend npx prisma migrate deploy
+```
+
+5. **Verificar se está funcionando:**
+```bash
+# Ver logs
+docker logs -f financial-wallet-backend
+
+# Testar endpoint de saúde (se disponível)
+curl http://localhost:3000/api
+
+# Acessar Swagger
+# http://localhost:3000/api
+```
+
+### Executar o container manualmente
+
+```bash
+docker run -d \
+  --name financial-wallet-backend \
+  -p 3000:3000 \
+  --env-file .env \
+  financial-wallet-backend
+```
+
+### Comandos úteis
+
+```bash
+# Ver logs
+docker logs -f financial-wallet-backend
+
+# Parar o container
+docker stop financial-wallet-backend
+
+# Remover o container
+docker rm financial-wallet-backend
+
+# Reconstruir e reiniciar
+docker-compose down
+docker-compose up -d --build
+
+# Executar migrações
+docker exec -it financial-wallet-backend npx prisma migrate deploy
+
+```
 
 ## Documentação da API
 
@@ -197,13 +279,4 @@ Ao revisar o código, verifique:
 4. **Segurança**: Validações e proteções implementadas?
 5. **Performance**: Queries otimizadas? Uso de transações?
 6. **Documentação**: Código auto-explicativo? Swagger atualizado?
-
-## Próximos Passos
-
-- [ ] Implementar testes unitários e de integração
-- [ ] Adicionar rate limiting
-- [ ] Implementar refresh tokens
-- [ ] Adicionar cache com Redis
-- [ ] Melhorar métricas e observabilidade
-- [ ] Adicionar health checks
 

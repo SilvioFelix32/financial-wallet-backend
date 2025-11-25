@@ -1,0 +1,23 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: financial-wallet-backend
+    ports:
+      - "${APP_PORT:-3003}:${APP_PORT:-3003}"
+    environment:
+      - NODE_ENV=production
+      - APP_PORT=${APP_PORT:-3003}
+      - API_RESPONSE_LIMIT=${API_RESPONSE_LIMIT:-10}
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_URL=${REDIS_URL}
+      - AWS_REGION=${AWS_REGION}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
+    restart: unless-stopped
+
