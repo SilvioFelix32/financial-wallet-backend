@@ -72,7 +72,10 @@ export class WalletRepository implements IWalletRepository {
     referenceTransactionId: string,
   ): Promise<Transaction | null> {
     const result = await this.databaseService.transaction.findFirst({
-      where: { referenceTransactionId },
+      where: {
+        referenceTransactionId,
+        type: TransactionType.REVERSAL,
+      },
     });
     return result ? this.mapToTransaction(result) : null;
   }
