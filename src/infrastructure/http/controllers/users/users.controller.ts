@@ -63,6 +63,7 @@ export class UsersController {
   }
 
   @Get(':user_id')
+  @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiParam({ name: 'user_id', description: 'User ID', type: String })
