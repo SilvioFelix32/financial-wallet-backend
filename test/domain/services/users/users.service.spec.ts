@@ -17,21 +17,19 @@ describe('UsersService', () => {
   };
 
   beforeEach(async () => {
-    const mockUsersRepository = {
-      create: jest.fn(),
-      updateBalance: jest.fn(),
-      updateBalanceInTransaction: jest.fn(),
-      findByEmail: jest.fn(),
-      findByUserId: jest.fn(),
-      findAll: jest.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
         {
           provide: USERS_REPOSITORY_TOKEN,
-          useValue: mockUsersRepository,
+          useValue: {
+            create: jest.fn(),
+            updateBalance: jest.fn(),
+            updateBalanceInTransaction: jest.fn(),
+            findByEmail: jest.fn(),
+            findByUserId: jest.fn(),
+            findAll: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -46,12 +44,7 @@ describe('UsersService', () => {
 
   describe('create', () => {
     it('should create a new user', async () => {
-      const createData = {
-        user_id: 'user-1',
-        name: 'John Doe',
-        email: 'john@example.com',
-      };
-
+      const createData = { user_id: 'user-1', name: 'John Doe', email: 'john@example.com' };
       usersRepository.create.mockResolvedValue(mockUser);
 
       const result = await service.create(createData);
@@ -106,12 +99,7 @@ describe('UsersService', () => {
 
   describe('findOrCreate', () => {
     it('should return existing user when found', async () => {
-      const createData = {
-        user_id: 'user-1',
-        name: 'John Doe',
-        email: 'john@example.com',
-      };
-
+      const createData = { user_id: 'user-1', name: 'John Doe', email: 'john@example.com' };
       usersRepository.findByUserId.mockResolvedValue(mockUser);
 
       const result = await service.findOrCreate(createData);
@@ -122,19 +110,8 @@ describe('UsersService', () => {
     });
 
     it('should create new user when not found', async () => {
-      const createData = {
-        user_id: 'user-2',
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-      };
-
-      const newUser: User = {
-        ...mockUser,
-        user_id: 'user-2',
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-      };
-
+      const createData = { user_id: 'user-2', name: 'Jane Doe', email: 'jane@example.com' };
+      const newUser: User = { ...mockUser, user_id: 'user-2', name: 'Jane Doe', email: 'jane@example.com' };
       usersRepository.findByUserId.mockResolvedValue(null);
       usersRepository.create.mockResolvedValue(newUser);
 
@@ -149,31 +126,20 @@ describe('UsersService', () => {
 
   describe('findAll', () => {
     it('should return users with pagination', async () => {
-      const users = [mockUser];
-      const total = 1;
-
-      usersRepository.findAll.mockResolvedValue({ users, total });
+      usersRepository.findAll.mockResolvedValue({ users: [mockUser], total: 1 });
 
       const result = await service.findAll({ page: 1, limit: 10 });
 
       expect(result).toEqual({
-        users,
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 1,
-          totalPages: 1,
-        },
+        users: [mockUser],
+        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
       });
       expect(usersRepository.findAll).toHaveBeenCalledWith(1, 10);
       expect(usersRepository.findAll).toHaveBeenCalledTimes(1);
     });
 
     it('should calculate totalPages correctly', async () => {
-      const users = [mockUser];
-      const total = 25;
-
-      usersRepository.findAll.mockResolvedValue({ users, total });
+      usersRepository.findAll.mockResolvedValue({ users: [mockUser], total: 25 });
 
       const result = await service.findAll({ page: 1, limit: 10 });
 
@@ -188,12 +154,7 @@ describe('UsersService', () => {
 
       expect(result).toEqual({
         users: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          totalPages: 0,
-        },
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
       });
     });
 
@@ -202,14 +163,8 @@ describe('UsersService', () => {
 
       const result = await service.findAll({});
 
-      expect(result.pagination).toEqual({
-        page: 1,
-        limit: 10,
-        total: 0,
-        totalPages: 0,
-      });
+      expect(result.pagination).toEqual({ page: 1, limit: 10, total: 0, totalPages: 0 });
       expect(usersRepository.findAll).toHaveBeenCalledWith(1, 10);
     });
   });
 });
-

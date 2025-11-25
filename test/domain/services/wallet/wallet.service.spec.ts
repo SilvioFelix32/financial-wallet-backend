@@ -39,43 +39,32 @@ describe('WalletService', () => {
   };
 
   beforeEach(async () => {
-    const mockWalletRepository = {
-      createTransaction: jest.fn(),
-      createTransactionInTransaction: jest.fn(),
-      findTransactionById: jest.fn(),
-      findTransactionByReferenceId: jest.fn(),
-      findTransactionsByUserId: jest.fn(),
-      calculateBalance: jest.fn(),
-    };
-
-    const mockUsersRepository = {
-      create: jest.fn(),
-      updateBalance: jest.fn(),
-      updateBalanceInTransaction: jest.fn(),
-      findByEmail: jest.fn(),
-      findByUserId: jest.fn(),
-      findAll: jest.fn(),
-    };
-
-    const mockDatabaseService = {
-      $transaction: jest.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WalletService,
         {
           provide: WALLET_REPOSITORY_TOKEN,
-          useValue: mockWalletRepository,
+          useValue: {
+            createTransaction: jest.fn(),
+            createTransactionInTransaction: jest.fn(),
+            findTransactionById: jest.fn(),
+            findTransactionByReferenceId: jest.fn(),
+            findTransactionsByUserId: jest.fn(),
+            calculateBalance: jest.fn(),
+          },
         },
         {
           provide: USERS_REPOSITORY_TOKEN,
-          useValue: mockUsersRepository,
+          useValue: {
+            create: jest.fn(),
+            updateBalance: jest.fn(),
+            updateBalanceInTransaction: jest.fn(),
+            findByEmail: jest.fn(),
+            findByUserId: jest.fn(),
+            findAll: jest.fn(),
+          },
         },
-        {
-          provide: DatabaseService,
-          useValue: mockDatabaseService,
-        },
+        { provide: DatabaseService, useValue: { $transaction: jest.fn() } },
       ],
     }).compile();
 
@@ -97,59 +86,31 @@ describe('WalletService', () => {
         user: {
           findUnique: jest
             .fn()
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              balance: 1000,
-            })
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              balance: 1100,
-            }),
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: 1000 })
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: 1100 }),
         },
       };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
       walletRepository.createTransactionInTransaction.mockResolvedValue(mockTransaction);
       usersRepository.updateBalanceInTransaction.mockResolvedValue(undefined);
 
       const result = await service.deposit('user-1', depositDto);
 
-      expect(result).toEqual({
-        message: 'Deposit successful',
-        balance: 1100,
-      });
+      expect(result).toEqual({ message: 'Deposit successful', balance: 1100 });
       expect(walletRepository.createTransactionInTransaction).toHaveBeenCalledWith(mockTx, {
         userId: 'user-1',
         type: TransactionType.DEPOSIT,
         amount: 100,
       });
-      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(
-        mockTx,
-        'user-1',
-        1100,
-      );
+      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(mockTx, 'user-1', 1100);
     });
 
     it('should throw NotFoundException when user does not exist', async () => {
-      const mockTx = {
-        user: {
-          findUnique: jest.fn().mockResolvedValue(null),
-        },
-      };
+      const mockTx = { user: { findUnique: jest.fn().mockResolvedValue(null) } };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
 
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-
-      await expect(service.deposit('non-existent', depositDto)).rejects.toThrow(
-        NotFoundException,
-      );
-      await expect(service.deposit('non-existent', depositDto)).rejects.toThrow(
-        'User not found',
-      );
+      await expect(service.deposit('non-existent', depositDto)).rejects.toThrow(NotFoundException);
+      await expect(service.deposit('non-existent', depositDto)).rejects.toThrow('User not found');
     });
 
     it('should handle negative balance correction when deposit amount <= correction', async () => {
@@ -157,32 +118,18 @@ describe('WalletService', () => {
         user: {
           findUnique: jest
             .fn()
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              balance: -50,
-            })
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              balance: 0,
-            }),
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: -50 })
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: 0 }),
         },
       };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
       walletRepository.createTransactionInTransaction.mockResolvedValue(mockTransaction);
       usersRepository.updateBalanceInTransaction.mockResolvedValue(undefined);
 
       const result = await service.deposit('user-1', { amount: 50 });
 
       expect(walletRepository.createTransactionInTransaction).toHaveBeenCalledTimes(1);
-      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(
-        mockTx,
-        'user-1',
-        0,
-      );
+      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(mockTx, 'user-1', 0);
       expect(result.balance).toBe(0);
     });
 
@@ -191,86 +138,44 @@ describe('WalletService', () => {
         user: {
           findUnique: jest
             .fn()
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              balance: -50,
-            })
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              balance: 100,
-            }),
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: -50 })
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: 100 }),
         },
       };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
       walletRepository.createTransactionInTransaction.mockResolvedValue(mockTransaction);
       usersRepository.updateBalanceInTransaction.mockResolvedValue(undefined);
 
       const result = await service.deposit('user-1', { amount: 150 });
 
       expect(walletRepository.createTransactionInTransaction).toHaveBeenCalledTimes(2);
-      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(
-        mockTx,
-        'user-1',
-        100,
-      );
+      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(mockTx, 'user-1', 100);
       expect(result.balance).toBe(100);
     });
   });
 
   describe('transfer', () => {
-    const transferDto: TransferDto = {
-      toUserId: 'user-2',
-      amount: 100,
-    };
+    const transferDto: TransferDto = { toUserId: 'user-2', amount: 100 };
 
     it('should transfer successfully', async () => {
       const mockTx = {
         user: {
           findUnique: jest
             .fn()
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              name: 'John Doe',
-              balance: 1000,
-            })
-            .mockResolvedValueOnce({
-              user_id: 'user-2',
-              name: 'Jane Doe',
-              balance: 500,
-            })
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              balance: 900,
-            }),
+            .mockResolvedValueOnce({ user_id: 'user-1', name: 'John Doe', balance: 1000 })
+            .mockResolvedValueOnce({ user_id: 'user-2', name: 'Jane Doe', balance: 500 })
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: 900 }),
         },
       };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
       walletRepository.createTransactionInTransaction
-        .mockResolvedValueOnce({
-          ...mockTransaction,
-          id: 'tx-from',
-        })
-        .mockResolvedValueOnce({
-          ...mockTransaction,
-          id: 'tx-to',
-        });
-
+        .mockResolvedValueOnce({ ...mockTransaction, id: 'tx-from' })
+        .mockResolvedValueOnce({ ...mockTransaction, id: 'tx-to' });
       usersRepository.updateBalanceInTransaction.mockResolvedValue(undefined);
 
       const result = await service.transfer('user-1', transferDto);
 
-      expect(result).toEqual({
-        message: 'Transfer successful',
-        balance: 900,
-      });
+      expect(result).toEqual({ message: 'Transfer successful', balance: 900 });
       expect(walletRepository.createTransactionInTransaction).toHaveBeenCalledTimes(2);
       expect(walletRepository.createTransactionInTransaction).toHaveBeenNthCalledWith(1, mockTx, {
         userId: 'user-1',
@@ -287,65 +192,37 @@ describe('WalletService', () => {
         senderId: 'user-1',
         senderName: 'John Doe',
       });
-      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(
-        mockTx,
-        'user-1',
-        900,
-      );
-      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(
-        mockTx,
-        'user-2',
-        600,
-      );
+      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(mockTx, 'user-1', 900);
+      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(mockTx, 'user-2', 600);
     });
 
     it('should throw BadRequestException when transferring to yourself', async () => {
-      await expect(
-        service.transfer('user-1', { toUserId: 'user-1', amount: 100 }),
-      ).rejects.toThrow(BadRequestException);
-      await expect(
-        service.transfer('user-1', { toUserId: 'user-1', amount: 100 }),
-      ).rejects.toThrow('Cannot transfer to yourself');
+      await expect(service.transfer('user-1', { toUserId: 'user-1', amount: 100 })).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.transfer('user-1', { toUserId: 'user-1', amount: 100 })).rejects.toThrow(
+        'Cannot transfer to yourself',
+      );
     });
 
     it('should throw NotFoundException when sender does not exist', async () => {
-      const mockTx = {
-        user: {
-          findUnique: jest.fn().mockResolvedValue(null),
-        },
-      };
+      const mockTx = { user: { findUnique: jest.fn().mockResolvedValue(null) } };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
 
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-
-      await expect(service.transfer('non-existent', transferDto)).rejects.toThrow(
-        NotFoundException,
-      );
-      await expect(service.transfer('non-existent', transferDto)).rejects.toThrow(
-        'Sender user not found',
-      );
+      await expect(service.transfer('non-existent', transferDto)).rejects.toThrow(NotFoundException);
+      await expect(service.transfer('non-existent', transferDto)).rejects.toThrow('Sender user not found');
     });
 
     it('should throw NotFoundException when recipient does not exist', async () => {
-      const findUniqueMock = jest
-        .fn()
-        .mockResolvedValueOnce({
-          user_id: 'user-1',
-          name: 'John Doe',
-          balance: 1000,
-        })
-        .mockResolvedValueOnce(null);
-
       const mockTx = {
         user: {
-          findUnique: findUniqueMock,
+          findUnique: jest
+            .fn()
+            .mockResolvedValueOnce({ user_id: 'user-1', name: 'John Doe', balance: 1000 })
+            .mockResolvedValueOnce(null),
         },
       };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
 
       await expect(service.transfer('user-1', transferDto)).rejects.toThrow(
         new NotFoundException('Recipient user not found'),
@@ -353,33 +230,18 @@ describe('WalletService', () => {
     });
 
     it('should throw UnprocessableEntityException when insufficient balance', async () => {
-      const findUniqueMock = jest
-        .fn()
-        .mockResolvedValueOnce({
-          user_id: 'user-1',
-          name: 'John Doe',
-          balance: 50,
-        })
-        .mockResolvedValueOnce({
-          user_id: 'user-2',
-          name: 'Jane Doe',
-          balance: 500,
-        });
-
       const mockTx = {
         user: {
-          findUnique: findUniqueMock,
+          findUnique: jest
+            .fn()
+            .mockResolvedValueOnce({ user_id: 'user-1', name: 'John Doe', balance: 50 })
+            .mockResolvedValueOnce({ user_id: 'user-2', name: 'Jane Doe', balance: 500 }),
         },
       };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
 
       await expect(service.transfer('user-1', transferDto)).rejects.toThrow(
-        new UnprocessableEntityException(
-          'Insufficient balance. Current balance: 50, required: 100',
-        ),
+        new UnprocessableEntityException('Insufficient balance. Current balance: 50, required: 100'),
       );
     });
   });
@@ -388,90 +250,45 @@ describe('WalletService', () => {
     const revertDto: RevertDto = { transactionId: 'tx-1' };
 
     it('should revert deposit successfully', async () => {
-      const originalTransaction = {
-        id: 'tx-1',
-        userId: 'user-1',
-        type: TransactionType.DEPOSIT,
-        amount: 100,
-      };
-
+      const originalTransaction = { id: 'tx-1', userId: 'user-1', type: TransactionType.DEPOSIT, amount: 100 };
       const mockTx = {
-        transaction: {
-          findUnique: jest.fn().mockResolvedValue(originalTransaction),
-        },
+        transaction: { findUnique: jest.fn().mockResolvedValue(originalTransaction) },
         user: {
           findUnique: jest
             .fn()
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              balance: 1000,
-            })
-            .mockResolvedValueOnce({
-              user_id: 'user-1',
-              balance: 900,
-            }),
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: 1000 })
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: 900 }),
         },
       };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
       walletRepository.findTransactionByReferenceId.mockResolvedValue(null);
       walletRepository.createTransactionInTransaction.mockResolvedValue(mockTransaction);
       usersRepository.updateBalanceInTransaction.mockResolvedValue(undefined);
 
       const result = await service.revert('user-1', revertDto);
 
-      expect(result).toEqual({
-        message: 'Transaction reverted successfully',
-        balance: 900,
-      });
+      expect(result).toEqual({ message: 'Transaction reverted successfully', balance: 900 });
       expect(walletRepository.createTransactionInTransaction).toHaveBeenCalledWith(mockTx, {
         userId: 'user-1',
         type: TransactionType.REVERSAL,
         amount: -100,
         referenceTransactionId: 'tx-1',
       });
-      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(
-        mockTx,
-        'user-1',
-        900,
-      );
+      expect(usersRepository.updateBalanceInTransaction).toHaveBeenCalledWith(mockTx, 'user-1', 900);
     });
 
     it('should throw NotFoundException when transaction does not exist', async () => {
-      const mockTx = {
-        transaction: {
-          findUnique: jest.fn().mockResolvedValue(null),
-        },
-      };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
+      const mockTx = { transaction: { findUnique: jest.fn().mockResolvedValue(null) } };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
 
       await expect(service.revert('user-1', revertDto)).rejects.toThrow(NotFoundException);
       await expect(service.revert('user-1', revertDto)).rejects.toThrow('Transaction not found');
     });
 
     it('should throw UnauthorizedException when trying to revert another user transaction', async () => {
-      const originalTransaction = {
-        id: 'tx-1',
-        userId: 'user-2',
-        type: TransactionType.DEPOSIT,
-        amount: 100,
-      };
-
-      const mockTx = {
-        transaction: {
-          findUnique: jest.fn().mockResolvedValue(originalTransaction),
-        },
-      };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
+      const originalTransaction = { id: 'tx-1', userId: 'user-2', type: TransactionType.DEPOSIT, amount: 100 };
+      const mockTx = { transaction: { findUnique: jest.fn().mockResolvedValue(originalTransaction) } };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
 
       await expect(service.revert('user-1', revertDto)).rejects.toThrow(UnauthorizedException);
       await expect(service.revert('user-1', revertDto)).rejects.toThrow(
@@ -480,92 +297,178 @@ describe('WalletService', () => {
     });
 
     it('should throw BadRequestException when transaction already reverted', async () => {
-      const originalTransaction = {
-        id: 'tx-1',
-        userId: 'user-1',
-        type: TransactionType.DEPOSIT,
-        amount: 100,
-      };
-
-      const mockTx = {
-        transaction: {
-          findUnique: jest.fn().mockResolvedValue(originalTransaction),
-        },
-      };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-
-      walletRepository.findTransactionByReferenceId.mockResolvedValue({
-        ...mockTransaction,
-        id: 'reversal-tx',
-      });
+      const originalTransaction = { id: 'tx-1', userId: 'user-1', type: TransactionType.DEPOSIT, amount: 100 };
+      const mockTx = { transaction: { findUnique: jest.fn().mockResolvedValue(originalTransaction) } };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
+      walletRepository.findTransactionByReferenceId.mockResolvedValue({ ...mockTransaction, id: 'reversal-tx' });
 
       await expect(service.revert('user-1', revertDto)).rejects.toThrow(BadRequestException);
-      await expect(service.revert('user-1', revertDto)).rejects.toThrow(
-        'Transaction already reverted',
-      );
+      await expect(service.revert('user-1', revertDto)).rejects.toThrow('Transaction already reverted');
     });
 
     it('should throw BadRequestException when trying to revert a reversal', async () => {
-      const originalTransaction = {
-        id: 'tx-1',
-        userId: 'user-1',
-        type: TransactionType.REVERSAL,
-        amount: -100,
-      };
-
-      const mockTx = {
-        transaction: {
-          findUnique: jest.fn().mockResolvedValue(originalTransaction),
-        },
-      };
-
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-
+      const originalTransaction = { id: 'tx-1', userId: 'user-1', type: TransactionType.REVERSAL, amount: -100 };
+      const mockTx = { transaction: { findUnique: jest.fn().mockResolvedValue(originalTransaction) } };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
       walletRepository.findTransactionByReferenceId.mockResolvedValue(null);
 
       await expect(service.revert('user-1', revertDto)).rejects.toThrow(BadRequestException);
-      await expect(service.revert('user-1', revertDto)).rejects.toThrow(
-        'Cannot revert a reversal transaction',
-      );
+      await expect(service.revert('user-1', revertDto)).rejects.toThrow('Cannot revert a reversal transaction');
     });
 
     it('should throw UnprocessableEntityException when insufficient balance to revert deposit', async () => {
-      const originalTransaction = {
-        id: 'tx-1',
-        userId: 'user-1',
-        type: TransactionType.DEPOSIT,
-        amount: 100,
+      const originalTransaction = { id: 'tx-1', userId: 'user-1', type: TransactionType.DEPOSIT, amount: 100 };
+      const mockTx = {
+        transaction: { findUnique: jest.fn().mockResolvedValue(originalTransaction) },
+        user: { findUnique: jest.fn().mockResolvedValue({ user_id: 'user-1', balance: 50 }) },
       };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
+      walletRepository.findTransactionByReferenceId.mockResolvedValue(null);
 
+      await expect(service.revert('user-1', revertDto)).rejects.toThrow(UnprocessableEntityException);
+      await expect(service.revert('user-1', revertDto)).rejects.toThrow('Insufficient balance to revert deposit');
+    });
+
+    it('should revert outgoing transfer successfully', async () => {
+      const originalTransaction = { id: 'tx-1', userId: 'user-1', type: TransactionType.TRANSFER, amount: -100 };
+      const recipientTransaction = { id: 'tx-2', userId: 'user-2', referenceTransactionId: 'tx-1', amount: 100 };
       const mockTx = {
         transaction: {
           findUnique: jest.fn().mockResolvedValue(originalTransaction),
+          findFirst: jest.fn().mockResolvedValue(recipientTransaction),
         },
         user: {
-          findUnique: jest.fn().mockResolvedValue({
-            user_id: 'user-1',
-            balance: 50,
-          }),
+          findUnique: jest
+            .fn()
+            .mockResolvedValueOnce({ user_id: 'user-2', name: 'Jane Doe', balance: 500 })
+            .mockResolvedValueOnce({ user_id: 'user-1', name: 'John Doe', balance: 900 })
+            .mockResolvedValueOnce({ user_id: 'user-1', balance: 1000 }),
         },
       };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
+      walletRepository.findTransactionByReferenceId.mockResolvedValue(null);
+      walletRepository.createTransactionInTransaction.mockResolvedValue(mockTransaction);
+      usersRepository.updateBalanceInTransaction.mockResolvedValue(undefined);
 
-      databaseService.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
+      const result = await service.revert('user-1', revertDto);
 
+      expect(result).toEqual({ message: 'Transaction reverted successfully', balance: 1000 });
+      expect(walletRepository.createTransactionInTransaction).toHaveBeenCalledTimes(2);
+    });
+
+    it('should revert incoming transfer successfully', async () => {
+      const originalTransaction = {
+        id: 'tx-2',
+        userId: 'user-2',
+        type: TransactionType.TRANSFER,
+        amount: 100,
+        referenceTransactionId: 'tx-1',
+      };
+      const senderTransaction = { id: 'tx-1', userId: 'user-1', amount: -100 };
+      const mockTx = {
+        transaction: {
+          findUnique: jest.fn().mockResolvedValueOnce(originalTransaction).mockResolvedValueOnce(senderTransaction),
+        },
+        user: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValueOnce({ user_id: 'user-1', name: 'John Doe', balance: 900 })
+            .mockResolvedValueOnce({ user_id: 'user-2', name: 'Jane Doe', balance: 600 })
+            .mockResolvedValueOnce({ user_id: 'user-2', balance: 500 }),
+        },
+      };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
+      walletRepository.findTransactionByReferenceId.mockResolvedValue(null);
+      walletRepository.createTransactionInTransaction.mockResolvedValue(mockTransaction);
+      usersRepository.updateBalanceInTransaction.mockResolvedValue(undefined);
+
+      const result = await service.revert('user-2', { transactionId: 'tx-2' });
+
+      expect(result).toEqual({ message: 'Transaction reverted successfully', balance: 500 });
+      expect(walletRepository.createTransactionInTransaction).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw NotFoundException when transfer recipient not found', async () => {
+      const originalTransaction = { id: 'tx-1', userId: 'user-1', type: TransactionType.TRANSFER, amount: -100 };
+      const mockTx = {
+        transaction: {
+          findUnique: jest.fn().mockResolvedValue(originalTransaction),
+          findFirst: jest.fn().mockResolvedValue(null),
+        },
+        user: { findUnique: jest.fn() },
+      };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
       walletRepository.findTransactionByReferenceId.mockResolvedValue(null);
 
+      await expect(service.revert('user-1', revertDto)).rejects.toThrow(NotFoundException);
+      await expect(service.revert('user-1', revertDto)).rejects.toThrow('Transfer recipient not found');
+    });
+
+    it('should throw NotFoundException when transfer sender not found', async () => {
+      const originalTransaction = {
+        id: 'tx-2',
+        userId: 'user-2',
+        type: TransactionType.TRANSFER,
+        amount: 100,
+        referenceTransactionId: null,
+      };
+      const mockTx = {
+        transaction: { findUnique: jest.fn().mockResolvedValue(originalTransaction) },
+        user: { findUnique: jest.fn() },
+      };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
+      walletRepository.findTransactionByReferenceId.mockResolvedValue(null);
+
+      await expect(service.revert('user-2', { transactionId: 'tx-2' })).rejects.toThrow(NotFoundException);
+      await expect(service.revert('user-2', { transactionId: 'tx-2' })).rejects.toThrow('Transfer sender not found');
+    });
+
+    it('should throw UnprocessableEntityException when recipient has insufficient balance to revert outgoing transfer', async () => {
+      const originalTransaction = { id: 'tx-1', userId: 'user-1', type: TransactionType.TRANSFER, amount: -100 };
+      const recipientTransaction = { id: 'tx-2', userId: 'user-2', referenceTransactionId: 'tx-1', amount: 100 };
+      const mockTx = {
+        transaction: {
+          findUnique: jest.fn().mockResolvedValue(originalTransaction),
+          findFirst: jest.fn().mockResolvedValue(recipientTransaction),
+        },
+        user: { findUnique: jest.fn().mockResolvedValue({ user_id: 'user-2', name: 'Jane Doe', balance: 50 }) },
+      };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
+      walletRepository.findTransactionByReferenceId.mockResolvedValue(null);
+
+      await expect(service.revert('user-1', revertDto)).rejects.toThrow(UnprocessableEntityException);
       await expect(service.revert('user-1', revertDto)).rejects.toThrow(
-        UnprocessableEntityException,
+        'Recipient has insufficient balance to revert transfer',
       );
-      await expect(service.revert('user-1', revertDto)).rejects.toThrow(
-        'Insufficient balance to revert deposit',
-      );
+    });
+
+    it('should throw UnprocessableEntityException when sender has insufficient balance to revert incoming transfer', async () => {
+      const originalTransaction = {
+        id: 'tx-2',
+        userId: 'user-2',
+        type: TransactionType.TRANSFER,
+        amount: 100,
+        referenceTransactionId: 'tx-1',
+      };
+      const senderTransaction = { id: 'tx-1', userId: 'user-1', amount: -100 };
+      const mockTx = {
+        transaction: {
+          findUnique: jest.fn().mockResolvedValueOnce(originalTransaction).mockResolvedValueOnce(senderTransaction),
+        },
+        user: { findUnique: jest.fn().mockResolvedValue({ user_id: 'user-1', name: 'John Doe', balance: 50 }) },
+      };
+      databaseService.$transaction.mockImplementation(async (callback: any) => callback(mockTx));
+      walletRepository.findTransactionByReferenceId.mockResolvedValue(null);
+
+      try {
+        await service.revert('user-2', { transactionId: 'tx-2' });
+        fail('Expected UnprocessableEntityException to be thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(UnprocessableEntityException);
+        expect((error as UnprocessableEntityException).message).toBe(
+          'Sender has insufficient balance to revert transfer',
+        );
+      }
     });
   });
 
@@ -589,61 +492,30 @@ describe('WalletService', () => {
 
   describe('getTransactions', () => {
     it('should return transactions with pagination', async () => {
-      const transactions = [
-        { ...mockTransaction, id: 'tx-1' },
-        { ...mockTransaction, id: 'tx-2' },
-      ];
-
-      walletRepository.findTransactionsByUserId.mockResolvedValue({
-        transactions,
-        total: 2,
-      });
+      const transactions = [{ ...mockTransaction, id: 'tx-1' }, { ...mockTransaction, id: 'tx-2' }];
+      walletRepository.findTransactionsByUserId.mockResolvedValue({ transactions, total: 2 });
 
       const query: TransactionsQueryDto = { page: 1, limit: 10 };
       const result = await service.getTransactions('user-1', query);
 
       expect(result).toEqual({
         transactions,
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 2,
-          totalPages: 1,
-        },
+        pagination: { page: 1, limit: 10, total: 2, totalPages: 1 },
       });
-      expect(walletRepository.findTransactionsByUserId).toHaveBeenCalledWith(
-        'user-1',
-        1,
-        10,
-      );
+      expect(walletRepository.findTransactionsByUserId).toHaveBeenCalledWith('user-1', 1, 10);
     });
 
     it('should use default pagination values when not provided', async () => {
-      walletRepository.findTransactionsByUserId.mockResolvedValue({
-        transactions: [],
-        total: 0,
-      });
+      walletRepository.findTransactionsByUserId.mockResolvedValue({ transactions: [], total: 0 });
 
       const result = await service.getTransactions('user-1', {});
 
-      expect(result.pagination).toEqual({
-        page: 1,
-        limit: 10,
-        total: 0,
-        totalPages: 0,
-      });
-      expect(walletRepository.findTransactionsByUserId).toHaveBeenCalledWith(
-        'user-1',
-        1,
-        10,
-      );
+      expect(result.pagination).toEqual({ page: 1, limit: 10, total: 0, totalPages: 0 });
+      expect(walletRepository.findTransactionsByUserId).toHaveBeenCalledWith('user-1', 1, 10);
     });
 
     it('should calculate totalPages correctly', async () => {
-      walletRepository.findTransactionsByUserId.mockResolvedValue({
-        transactions: [],
-        total: 25,
-      });
+      walletRepository.findTransactionsByUserId.mockResolvedValue({ transactions: [], total: 25 });
 
       const query: TransactionsQueryDto = { page: 1, limit: 10 };
       const result = await service.getTransactions('user-1', query);
@@ -652,4 +524,3 @@ describe('WalletService', () => {
     });
   });
 });
-

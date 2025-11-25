@@ -8,6 +8,9 @@ const jestConfig: JestConfigWithTsJest = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(jose)/)',
+  ],
   collectCoverageFrom: [
     'src/**/*.(t|j)s',
     '!src/**/*.spec.ts',
@@ -19,6 +22,7 @@ const jestConfig: JestConfigWithTsJest = {
   testEnvironment: 'node',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^src/(.*)$': '<rootDir>/src/$1',
   },
   coverageThreshold: {
     global: {
