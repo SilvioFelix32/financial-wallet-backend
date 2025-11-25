@@ -6,10 +6,11 @@ Sistema completo de carteira financeira com backend em NestJS seguindo Clean Arc
 
 - **NestJS** 11.1.9
 - **TypeScript** 5.9.3
-- **Prisma** 7.0.0
-- **PostgreSQL**
+- **Prisma** 7.0.0 (com adapter PostgreSQL)
+- **PostgreSQL** (via `@prisma/adapter-pg` e `pg`)
 - **AWS Cognito** para autenticação
 - **Swagger** para documentação
+- **Redis** para cache (opcional)
 
 ## Estrutura do Projeto
 
@@ -65,10 +66,12 @@ FRONTEND_URL=http://localhost:3000
 3. Configure o banco de dados:
 ```bash
 # Gerar Prisma Client
-npm run prisma:generate
+npx prisma generate
 
 # Executar migrações
-npm run prisma:migrate
+npx prisma migrate deploy
+# ou em desenvolvimento:
+npx prisma migrate dev
 ```
 
 4. Inicie o servidor:
@@ -95,7 +98,7 @@ O servidor estará disponível em `http://localhost:3001`
 
 1. **Configure o arquivo `.env`** com as variáveis de ambiente:
 ```bash
-APP_PORT=3000
+APP_PORT=3003
 DATABASE_URL=postgresql://user:password@host:5432/database
 JWT_SECRET=your-secret
 REDIS_HOST=your-redis-host
@@ -134,57 +137,53 @@ curl http://localhost:3000/api
 # http://localhost:3000/api
 ```
 
-### Executar o container manualmente
-
-```bash
-docker run -d \
-  --name financial-wallet-backend \
-  -p 3000:3000 \
-  --env-file .env \
-  financial-wallet-backend
-```
-
-### Comandos úteis
-
-```bash
-# Ver logs
-docker logs -f financial-wallet-backend
-
-# Parar o container
-docker stop financial-wallet-backend
-
-# Remover o container
-docker rm financial-wallet-backend
-
-# Reconstruir e reiniciar
-docker-compose down
-docker-compose up -d --build
-
-# Executar migrações
-docker exec -it financial-wallet-backend npx prisma migrate deploy
-
-```
-
 ## Documentação da API
 
-A documentação Swagger está disponível em:
-- `http://localhost:3001/api`
+### Documentação Completa
+
+Para documentação detalhada de todos os endpoints, incluindo exemplos de requisições e respostas, consulte:
+
+📖 **[Documentação Completa da API](./docs/API.md)**
+
+### Swagger UI
+
+Para uma documentação interativa e testes em tempo real:
+
+- **Swagger UI**: `http://localhost:3001/api`
+- **Swagger JSON**: `http://localhost:3001/api-json`
+
+A API utiliza versionamento por URI. Todas as rotas estão na versão **v1**.
 
 ## Autenticação
 
-O sistema usa **AWS Cognito** para autenticação. Os usuários devem se autenticar no Cognito e enviar o token de acesso no header `Authorization: Bearer <token>`.
+O sistema usa **AWS Cognito** para autenticação. Os usuários devem se autenticar no Cognito e enviar o token de acesso no header:
+
+```
+Authorization: Bearer <token>
+```
 
 O sistema sincroniza automaticamente os usuários do Cognito no banco de dados local quando eles fazem requisições autenticadas.
 
-### Wallet
+**Nota**: Todos os endpoints requerem autenticação via AWS Cognito, exceto `POST /v1/users` que é público para permitir a sincronização inicial de usuários.
 
-- `POST /wallet/deposit` - Depositar dinheiro
-- `POST /wallet/transfer` - Transferir para outro usuário
-- `POST /wallet/revert` - Reverter uma transação
-- `GET /wallet/balance` - Obter saldo atual
-- `GET /wallet/transactions` - Listar transações (paginado)
+## Endpoints da API
 
-**Nota**: Todos os endpoints de wallet requerem autenticação via AWS Cognito (token no header Authorization).
+### Resumo dos Endpoints
+
+#### Usuários (`/v1/users`)
+- `POST /v1/users` - Criar ou sincronizar usuário (público)
+- `GET /v1/users` - Listar usuários (paginado)
+- `GET /v1/users/email/:email` - Buscar usuário por email
+- `GET /v1/users/:user_id` - Buscar usuário por ID
+
+#### Carteira (`/v1/wallet`)
+- `POST /v1/wallet/deposit` - Depositar dinheiro
+- `POST /v1/wallet/transfer` - Transferir dinheiro
+- `POST /v1/wallet/revert` - Reverter transação
+- `GET /v1/wallet/balance` - Consultar saldo
+- `GET /v1/wallet/transactions` - Listar transações (paginado)
+
+📖 **Para documentação completa com exemplos detalhados, consulte [docs/API.md](./docs/API.md)**
 
 ## Regras de Negócio
 
@@ -196,6 +195,8 @@ O sistema sincroniza automaticamente os usuários do Cognito no banco de dados l
 - Valida saldo antes de transferir
 - Não permite transferência para si mesmo
 - Cria transações para remetente (negativa) e destinatário (positiva)
+- Rastreia informações do destinatário na transação do remetente (`recipientId` e `recipientName`)
+- Rastreia informações do remetente na transação do destinatário (`senderId` e `senderName`)
 
 ### Reversão
 - Todas as operações são reversíveis
@@ -223,11 +224,17 @@ npm run test:watch
 ## Migrações do Banco de Dados
 
 ```bash
-# Criar nova migração
-npm run prisma:migrate
+# Criar nova migração (desenvolvimento)
+npx prisma migrate dev
+
+# Aplicar migrações (produção)
+npx prisma migrate deploy
 
 # Visualizar banco no Prisma Studio
-npm run prisma:studio
+npx prisma studio
+
+# Gerar Prisma Client após mudanças no schema
+npx prisma generate
 ```
 
 ## Observabilidade

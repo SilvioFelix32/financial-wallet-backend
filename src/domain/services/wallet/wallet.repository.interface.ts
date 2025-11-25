@@ -16,6 +16,8 @@ export interface IWalletRepository {
     referenceTransactionId?: string;
     senderId?: string;
     senderName?: string;
+    recipientId?: string;
+    recipientName?: string;
   }): Promise<Transaction>;
   findTransactionById(id: string): Promise<Transaction | null>;
   findTransactionsByUserId(
@@ -34,6 +36,8 @@ export interface IWalletRepository {
       referenceTransactionId?: string;
       senderId?: string;
       senderName?: string;
+      recipientId?: string;
+      recipientName?: string;
     },
   ): Promise<Transaction>;
 }

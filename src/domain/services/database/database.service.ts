@@ -6,6 +6,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
+import { environment } from '@/shared/config/env';
 
 @Injectable()
 export class DatabaseService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -13,6 +16,16 @@ export class DatabaseService extends PrismaClient implements OnModuleInit, OnMod
   private connectionAttempts = 0;
   private readonly maxConnectionAttempts = 3;
   private readonly retryDelayMs = 1000;
+  private readonly pool: Pool;
+
+  constructor() {
+    const connectionString = environment.DATABASE_URL;
+
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
+    super({ adapter });
+    this.pool = pool;
+  }
 
   async onModuleInit() {
     await this.connectWithRetry();
@@ -20,6 +33,7 @@ export class DatabaseService extends PrismaClient implements OnModuleInit, OnMod
 
   async onModuleDestroy() {
     await this.$disconnect();
+    await this.pool.end();
   }
 
   private async connectWithRetry() {
@@ -52,6 +66,7 @@ export class DatabaseService extends PrismaClient implements OnModuleInit, OnMod
   async enableShutdownHooks(app: INestApplication) {
     process.on('beforeExit', async () => {
       await this.$disconnect();
+      await this.pool.end();
       await app.close();
     });
   }

@@ -15,6 +15,8 @@ export class WalletRepository implements IWalletRepository {
     referenceTransactionId?: string;
     senderId?: string;
     senderName?: string;
+    recipientId?: string;
+    recipientName?: string;
   }): Promise<Transaction> {
     const result = await this.databaseService.transaction.create({
       data: {
@@ -24,6 +26,8 @@ export class WalletRepository implements IWalletRepository {
         referenceTransactionId: data.referenceTransactionId,
         senderId: data.senderId,
         senderName: data.senderName,
+        recipientId: data.recipientId,
+        recipientName: data.recipientName,
       },
     });
     return this.mapToTransaction(result);
@@ -38,6 +42,8 @@ export class WalletRepository implements IWalletRepository {
       referenceTransactionId?: string;
       senderId?: string;
       senderName?: string;
+      recipientId?: string;
+      recipientName?: string;
     },
   ): Promise<Transaction> {
     const result = await tx.transaction.create({
@@ -48,6 +54,8 @@ export class WalletRepository implements IWalletRepository {
         referenceTransactionId: data.referenceTransactionId,
         senderId: data.senderId,
         senderName: data.senderName,
+        recipientId: data.recipientId,
+        recipientName: data.recipientName,
       },
     });
     return this.mapToTransaction(result);
@@ -116,6 +124,8 @@ export class WalletRepository implements IWalletRepository {
       referenceTransactionId: prismaTransaction.referenceTransactionId || undefined,
       senderId: prismaTransaction.senderId || undefined,
       senderName: prismaTransaction.senderName || undefined,
+      recipientId: prismaTransaction.recipientId || undefined,
+      recipientName: prismaTransaction.recipientName || undefined,
       createdAt: prismaTransaction.createdAt,
     };
   }

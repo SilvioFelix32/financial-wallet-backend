@@ -12,6 +12,8 @@ export class Transaction {
   referenceTransactionId?: string;
   senderId?: string;
   senderName?: string;
+  recipientId?: string;
+  recipientName?: string;
   createdAt: Date;
 }
 

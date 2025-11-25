@@ -276,6 +276,8 @@ describe('WalletService', () => {
         userId: 'user-1',
         type: TransactionType.TRANSFER,
         amount: -100,
+        recipientId: 'user-2',
+        recipientName: 'Jane Doe',
       });
       expect(walletRepository.createTransactionInTransaction).toHaveBeenNthCalledWith(2, mockTx, {
         userId: 'user-2',

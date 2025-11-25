@@ -65,6 +65,8 @@ export class WalletService {
         userId: fromUserId,
         type: TransactionType.TRANSFER,
         amount: -transferDto.amount,
+        recipientId: transferDto.toUserId,
+        recipientName: toUser.name,
       });
 
       await this.walletRepository.createTransactionInTransaction(tx, {
@@ -267,6 +269,8 @@ export class WalletService {
       type: TransactionType.REVERSAL,
       amount: absoluteAmount,
       referenceTransactionId: originalTransaction.id,
+      recipientId: toUserId,
+      recipientName: toUser.name,
     });
 
     await this.walletRepository.createTransactionInTransaction(tx, {
@@ -313,6 +317,8 @@ export class WalletService {
       type: TransactionType.REVERSAL,
       amount: -amount,
       referenceTransactionId: originalTransaction.id,
+      recipientId: fromUserId,
+      recipientName: fromUser.name,
     });
 
     await this.walletRepository.createTransactionInTransaction(tx, {
