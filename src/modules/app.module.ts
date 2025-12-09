@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { SecurityModule } from './security.module';
 import { UsersModule } from './users.module';
 import { WalletModule } from './wallet.module';
+import { HealthModule } from './health.module';
 import { SharedServicesModule } from './shared-services.module';
 import { CognitoStrategy } from '@/infrastructure/security/auth/strategies/cognito.strategy';
 import { JwtService } from '@nestjs/jwt';
@@ -19,6 +20,7 @@ import { APP_GUARD, APP_FILTER } from '@nestjs/core';
     }),
     SharedServicesModule,
     SecurityModule,
+    HealthModule,
     UsersModule,
     WalletModule,
   ],
